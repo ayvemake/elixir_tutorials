@@ -5,8 +5,7 @@ defmodule Servy.Parser do
   def parse(request) do
     [request_line | header_lines] =
       request
-      |> String.split("\n")
-      |> Enum.map(&String.trim/1)
+      |> String.split("\r\n")
       |> Enum.filter(&(&1 != ""))
 
     [method, path, _] = String.split(request_line)
@@ -24,30 +23,19 @@ defmodule Servy.Parser do
 
 
   def parse_headers([head | tail], headers) do
-    [key, value] = String.split(head, ": ")
-    headers = Map.put(headers, key, value)
-    parse_headers(tail, headers)
+    case String.split(head, ": ") do
+      [key, value] ->
+        headers = Map.put(headers, key, value)
+        parse_headers(tail, headers)
+      _ ->
+        parse_headers(tail, headers)
+    end
   end
 
   def parse_headers([], headers), do: headers
 
-
-  @doc """
-    Parses the given param string of the form "key1=value1&key2=value2"
-    into a map with corresponding keys and values.
-
-    ## Examples
-    iex> params_string = "name=Baloo&type=Brown"
-    iex> Servy.Parser.parse_params("application/x-www-form-urlencoded",)
-    %{"name" => "Baloo", "type" => "Brown"}
-
-    iex> Servy.Parser.parse_params("multipart/form-data", params_string)
-    %{}
-
-
-  """
   def parse_params("application/x-www-form-urlencoded", request) do
-    [_, params_string] = String.split(request, "\n\n")
+    [_, params_string] = String.split(request, "\r\n\r\n")
     params_string |> String.trim() |> URI.decode_query()
   end
 
